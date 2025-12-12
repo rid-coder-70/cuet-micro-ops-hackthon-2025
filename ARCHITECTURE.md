@@ -8,37 +8,56 @@ The system adopts an **Asynchronous Job Queue** pattern. This decouples the clie
 
 ```mermaid
 sequenceDiagram
-    participant User as Client (Frontend)
-    participant API as API Service
-    participant Queue as Job Queue (Redis)
-    participant Worker as Worker Service
-    participant DB as Database (Postgres)
-    participant S3 as Storage (RustFS)
+    autonumber
 
-    Note over User, API: Phase 1: Initiation
-    User->>API: POST /v1/download/initiate {file_ids: [...]}
-    API->>DB: Create Job Record (status: QUEUED)
-    API->>Queue: Publish Job ID
-    API-->>User: Return { jobId, status: "queued" } (Immediate 200 OK)
-
-    Note over Queue, Worker: Phase 2: Processing (Async)
-    Worker->>Queue: Consume Job
-    Worker->>DB: Update Job Status (PROCESSING)
-    Worker->>Worker: Generate/Process Files (10s - 120s)
-    Worker->>S3: Upload Archive to S3
-    Worker->>DB: Update Job (COMPLETED, s3_key, url)
-    
-    Note over User, API: Phase 3: Polling
-    loop Every 3-5 seconds
-        User->>API: GET /v1/download/status/:jobId
-        API->>DB: Query Job Status
-        API-->>User: Return { status: "processing", progress: 45% }
+    box "Frontend" #e6f3ff
+        participant User as Client (React/Next.js)
     end
 
-    Note over User, S3: Phase 4: Completion
-    User->>API: GET /v1/download/status/:jobId
-    API-->>User: Return { status: "completed", downloadUrl: "presigned_url" }
-    User->>S3: GET /downloads/file.zip (Direct Download)
+    box "Backend Services" #fff0e6
+        participant API as API Service
+        participant Queue as BullMQ (Redis)
+        participant Worker as Worker Service
+    end
+
+    box "Data & Storage" #e6ffe6
+        participant DB as PostgreSQL
+        participant S3 as RustFS (S3)
+    end
+
+    rect rgb(230, 240, 255)
+        Note over User, DB: Phase 1: Initiation
+        User->>API: POST /v1/download/initiate {file_ids: [...]}
+        API->>DB: INSERT Job (status: QUEUED)
+        API->>Queue: Add Job to Queue
+        API-->>User: 200 OK { jobId, status: "queued" }
+    end
+
+    rect rgb(255, 250, 230)
+        Note over Queue, S3: Phase 2: Async Processing
+        Worker->>Queue: Process Job
+        Worker->>DB: UPDATE Job (status: PROCESSING)
+        Worker->>Worker: Generate Archive (10s - 120s+)
+        Worker->>S3: Upload .zip File
+        Worker->>DB: UPDATE Job (status: COMPLETED, s3_key)
+    end
+    
+    rect rgb(240, 255, 240)
+        Note over User, DB: Phase 3: Polling Strategy
+        loop Every 3-5 seconds
+            User->>API: GET /v1/download/status/:jobId
+            API->>DB: SELECT status FROM Jobs
+            API-->>User: { status: "processing", progress: 45% }
+        end
+    end
+
+    rect rgb(230, 230, 250)
+        Note over User, S3: Phase 4: Delivery
+        User->>API: GET /v1/download/status/:jobId
+        API->>DB: SELECT status, s3_key
+        API-->>User: { status: "completed", downloadUrl: "presigned_url" }
+        User->>S3: GET /downloads/file.zip (Direct S3 Download)
+    end
 ```
 
 ## 2. Technical Approach: Option A (Polling Pattern)
