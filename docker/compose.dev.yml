@@ -9,6 +9,7 @@ services:
       - "3000:3000"
     volumes:
       - ../src:/app/src
+      - ../.env:/app/.env
     env_file:
       - ../.env
     environment:
@@ -24,3 +25,27 @@ services:
       - "4318:4318"
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+
+  delineate-storage:
+    image: rustfs/rustfs:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: [ "/data" ]
+    environment:
+      - RUSTFS_ACCESS_KEY=admin
+      - RUSTFS_SECRET_KEY=password
+
+  init-s3:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    volumes:
+      - ../src:/app/src
+      - ../scripts:/app/scripts
+      - ../.env:/app/.env
+    env_file:
+      - ../.env
+    depends_on:
+      - delineate-storage
+    command: [ "node", "--experimental-transform-types", "scripts/init-s3.ts" ]
