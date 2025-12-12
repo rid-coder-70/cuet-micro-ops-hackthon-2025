@@ -51,12 +51,14 @@ curl -X POST http://localhost:3000/v1/download/start \
 The project includes a comprehensive CI/CD pipeline using GitHub Actions that runs on every push and pull request.
 
 **Pipeline Stages:**
+
 1. **Lint**: Checks code style and formatting (`npm run lint`, `npm run format:check`).
 2. **Test**: Runs E2E tests with full service dependencies (Node.js, RustFS, JAeger) using Docker Compose.
 3. **Build**: Builds the Docker image and caches layers for performance.
 
 **Running Tests Locally:**
 To ensure your changes pass CI, run the following before pushing:
+
 ```bash
 # 1. Start services and app
 npm run docker:dev

@@ -31,7 +31,7 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    command: [ "/data" ]
+    command: ["/data"]
     environment:
       - RUSTFS_ACCESS_KEY=admin
       - RUSTFS_SECRET_KEY=password
@@ -48,4 +48,4 @@ services:
       - ../.env
     depends_on:
       - delineate-storage
-    command: [ "node", "--experimental-transform-types", "scripts/init-s3.ts" ]
+    command: ["node", "--experimental-transform-types", "scripts/init-s3.ts"]

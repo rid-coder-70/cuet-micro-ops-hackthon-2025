@@ -36,8 +36,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -61,7 +61,6 @@ jobs:
           NODE_ENV: development
           DOWNLOAD_DELAY_MIN_MS: "100"
           DOWNLOAD_DELAY_MAX_MS: "200"
-
 
   build:
     name: Build Docker Image
