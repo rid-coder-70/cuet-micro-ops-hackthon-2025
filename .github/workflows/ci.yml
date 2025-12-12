@@ -29,29 +29,36 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-24.04
     needs: lint
-    container:
-      image: node:24-slim
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Start Services
+        run: docker compose -f docker/compose.dev.yml up -d --build
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for services..."
+          sleep 10
+          docker ps
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/health
 
       - name: Run E2E tests
         run: npm run test:e2e
         env:
           NODE_ENV: development
-          PORT: 3000
-          S3_REGION: us-east-1
-          S3_BUCKET_NAME: ""
-          S3_FORCE_PATH_STYLE: "true"
-          SENTRY_DSN: ""
-          OTEL_EXPORTER_OTLP_ENDPOINT: ""
-          REQUEST_TIMEOUT_MS: "30000"
-          RATE_LIMIT_WINDOW_MS: "60000"
-          RATE_LIMIT_MAX_REQUESTS: "100"
-          CORS_ORIGINS: "*"
+          DOWNLOAD_DELAY_MIN_MS: "100"
+          DOWNLOAD_DELAY_MAX_MS: "200"
+
 
   build:
     name: Build Docker Image
